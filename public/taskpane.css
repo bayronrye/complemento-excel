@@ -1,0 +1,56 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  color: #1f2933;
+  background: #f5f7fa;
+}
+header {
+  display: flex; gap: 8px; align-items: center; justify-content: space-between;
+  padding: 10px 12px; background: #0b3d6e; color: #fff;
+}
+header .title { font-weight: 600; font-size: 14px; white-space: nowrap; }
+header select { max-width: 55%; padding: 4px; border-radius: 4px; border: 0; }
+nav { display: flex; background: #fff; border-bottom: 1px solid #d9e0e7; }
+.tab {
+  flex: 1; padding: 9px 4px; border: 0; background: none; cursor: pointer;
+  font-size: 12.5px; border-bottom: 3px solid transparent; color: #52606d;
+}
+.tab.active { color: #0b3d6e; border-bottom-color: #0b3d6e; font-weight: 600; }
+.panel { display: none; padding: 12px; }
+.panel.active { display: block; }
+.hint { color: #52606d; margin: 0 0 10px; line-height: 1.4; }
+label { display: block; margin-bottom: 10px; font-weight: 600; }
+label.check { font-weight: 400; }
+input[type=text], input[type=password], input[type=number], textarea {
+  display: block; width: 100%; margin-top: 4px; padding: 7px;
+  border: 1px solid #c4ccd4; border-radius: 4px; font: inherit; background: #fff;
+}
+textarea { resize: vertical; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; align-items: center; }
+button {
+  padding: 7px 12px; border: 1px solid #b8c2cc; border-radius: 4px;
+  background: #fff; cursor: pointer; font: inherit;
+}
+button.primary { background: #0b3d6e; border-color: #0b3d6e; color: #fff; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.out {
+  margin-top: 8px; padding: 8px; background: #fff; border: 1px solid #d9e0e7;
+  border-radius: 4px; white-space: pre-wrap; min-height: 20px; max-height: 280px; overflow: auto;
+}
+.out:empty { display: none; }
+.out.error { border-color: #d64545; color: #a61b1b; }
+.badge {
+  display: inline-block; margin-bottom: 8px; padding: 2px 9px; border-radius: 10px;
+  font-size: 11px; font-weight: 600; background: #e4e7eb; color: #52606d;
+}
+.badge:empty { display: none; }
+.badge.gemini { background: linear-gradient(90deg, #e8f0fe, #f3e8fd); color: #1a4fb4; }
+.status { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: #0b3d6e; font-size: 12px; }
+.status:empty { display: none; }
+.status.busy::before {
+  content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid #0b3d6e; border-top-color: transparent; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

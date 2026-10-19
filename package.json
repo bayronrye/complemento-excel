@@ -1,0 +1,12 @@
+{
+  "name": "excel-multi-ia",
+  "version": "1.0.0",
+  "description": "Complemento de Excel con GPT, Claude y Gemini usando tus propias API keys",
+  "private": true,
+  "scripts": {
+    "certs": "npx office-addin-dev-certs install",
+    "start": "node server.js",
+    "sideload": "npx office-addin-debugging start manifest.xml desktop",
+    "stop": "npx office-addin-debugging stop manifest.xml"
+  }
+}

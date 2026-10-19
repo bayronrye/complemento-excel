@@ -1,0 +1,251 @@
+PROYECTO: EXCEL MULTI-IA (ADD-IN DE ALTO RENDIMIENTO)
+ENTORNO OBJETIVO: CLAUDE CODE 
+ARCHIVO DE INSTRUCCIONES AUTOMATIZADAS Y ESPECIFICACIÓN TÉCNICA
+================================================================================
+
+[0RDEN EJECUCIÓN AUTÓNOMA)]
+Actúa como un ingeniero de software senior y especialista en seguridad DevSecOps.
+Debes aplicar todas las mejoras descritas en este documento dentro del directorio
+actual del proyecto (`excel-multi-ia`), proteger las credenciales para que NUNCA
+se filtre la API Key del usuario (prefijos "AQ.A" o "AIza") y subir el código limpio
+al repositorio remoto: https://github.com/bayronrye/complemento-excel.git
+
+Sigue estrictamente esta secuencia de pasos sin omitir ninguno:
+
+PASO 1: AUDITORÍA Y SANITIZACIÓN DE SECRETOS (CRÍTICO)
+1. Escanea todos los archivos del proyecto (`server.js`, `package.json`, `manifest.xml`, `public/taskpane.js`, `public/gemini-agent.js`, `public/taskpane.html`, `public/taskpane.css`) buscando cadenas que coincidan con:
+   - `AQ\.A`
+   - `AIza`
+   - `sk-`
+   - Cualquier API Key hardcodeada.
+2. Si encuentras alguna clave escrita en el código fuente:
+   - Elimínala inmediatamente del archivo.
+   - Si es en el backend (`server.js`), reemplázala por `process.env.GEMINI_API_KEY` (o el proveedor correspondiente).
+   - Si es en el frontend (`public/taskpane.js` o `public/gemini-agent.js`), asegúrate de que se lea únicamente desde `localStorage` a través de la pestaña Ajustes.
+
+PASO 2: CREACIÓN DE ARCHIVOS DE PROTECCIÓN (.gitignore y .env.example)
+1. Crea (o sobrescribe) el archivo `.gitignore` en la raíz del proyecto con el siguiente contenido exacto:
+   ```gitignore
+   # Dependencias
+   node_modules/
+   npm-debug.log*
+   yarn-debug.log*
+   yarn-error.log*
+
+   # Variables de entorno y claves secretas (PROHIBIDO SUBIR)
+   .env
+   .env.local
+   .env.*.local
+   *apikey*
+   *secret*
+   keys.json
+   config.secret.js
+
+   # Certificados y temporales de Office Add-in Debugging
+   .office-addin-dev-certs/
+   dist/
+   build/
+   *.log
+   *.tmp
+
+   # Sistema Operativo y Editores
+   .DS_Store
+   Thumbs.db
+   .vscode/
+   .idea/
+   ```
+2. Crea un archivo `.env.example` en la raíz como plantilla limpia (sin claves reales):
+   ```env
+   PORT=3000
+   GEMINI_API_KEY=pega_tu_api_key_de_ai_studio_aqui
+   OPENAI_API_KEY=pega_tu_api_key_de_openai_aqui
+   ANTHROPIC_API_KEY=pega_tu_api_key_de_claude_aqui
+   ```
+3. Si existe un archivo `.env` real con la clave del usuario, verifica con `git status --ignored` que esté siendo ignorado correctamente por Git.
+
+PASO 3: MEJORAS EN EL CÓDIGO (`server.js`, `public/gemini-agent.js`, `public/taskpane.js`)
+1. En `server.js`:
+   - Asegúrate de cargar variables de entorno si existe soporte para `dotenv` (o lectura nativa de `process.env`) como fallback cuando el cliente no envíe API key en el header/body.
+   - Agrega el mapeo de modelos avanzados (`gemini-3.8-flash`, `gemini-3.5-flash-lite`, `gpt-4-argon`, `claude-3-1-sonnet`).
+2. En `public/gemini-agent.js` y `public/taskpane.js`:
+   - Sanitización JSON: Antes de hacer `JSON.parse()` de la respuesta del modelo, limpia los bloques Markdown con `.replace(/```json|```/g, '').trim()`.
+   - Límite de seguridad pre-vuelo: Si el rango seleccionado en modo Agente supera las 500 filas, muestra una advertencia o procesa por lotes para no congelar Excel.
+   - Control de cancelación: Conecta un `AbortController` al botón "Detener" para abortar peticiones `fetch` activas.
+   - Optimización Antigravity en Office.js: Verifica que la función de rellenar celdas vacías hacia abajo (`fill_blanks_above` para casos como TURNO y RESPONSABLE) haga un único `context.sync()` de lectura y un único `context.sync()` de escritura (cero `context.sync()` dentro de bucles `for`).
+
+PASO 4: DESPLIEGUE SEGURO A GITHUB
+1. Inicializa Git si no está inicializado: `git init`
+2. Cambia a la rama principal: `git branch -M main`
+3. Agrega los archivos: `git add .`
+4. VERIFICACIÓN DE SEGURIDAD OBLIGATORIA ANTES DEL COMMIT:
+   - Ejecuta `git diff --cached` y verifica que NO aparezca ninguna API key (`AQ.A...`, `AIza...`, `sk-...`) ni el archivo `.env` ni `node_modules/`.
+5. Realiza el commit:
+   `git commit -m "feat: complemento Excel Multi-IA con gemini-agent, optimización Antigravity y seguridad de API keys"`
+6. Configura el remoto:
+   `git remote remove origin 2>/dev/null || true`
+   `git remote add origin https://github.com/bayronrye/complemento-excel.git`
+7. Sube los cambios:
+   `git push -u origin main`
+
+================================================================================
+[1. VISIÓN GENERAL DE LA ARQUITECTURA]
+- Nombre del módulo: excel-multi-ia
+- Plataforma: Office.js Add-in (Excel Desktop / Web)
+- Backend: Servidor local Node.js (Express / HTTP Proxy)
+- Proveedores de LLM:
+  * Google AI Studio (Gemini 3.8 Flash, Gemini 3.5 Flash Lite)
+  * OpenAI (GPT-4-Argon, GPT-6-Sol, GPT-6-Luna)
+  * Anthropic (Claude 3.1 / 3.5 Sonnet, Claude Opus)
+- Modo de carga: Sideloading local vía manifiesto XML (manifest.xml)
+- Persistencia de llaves: LocalStorage en el cliente (aislado por dispositivo)
+
+--------------------------------------------------------------------------------
+[2. PRINCIPIOS FUNDAMENTALES "ANTIGRAVITY" (ZERO-OVERHEAD)]
+El agente debe operar bajo directrices estrictas de cero fricción y latencia mínima:
+
+2.1. Payload Quirúrgico (Contexto Estricto):
+  - PROHIBIDO transferir hojas completas mediante worksheet.getUsedRange().
+  - Extraer únicamente el rango activo delimitado: context.workbook.getSelectedRange().
+  - Incluir automáticamente solo una fila previa de cabecera si la selección no la tiene.
+  - Comprimir celdas nulas o vacías en matrices compactadas (ejemplo: usar token "_" para nulls).
+
+2.2. Sincronización Atómica en Office.js:
+  - PROHIBIDO invocar "await context.sync()" dentro de bucles o iteradores.
+  - Regla 1-Sync de Lectura: Cargar todas las propiedades requeridas (formulas, values, rowCount, columnCount, rowIndex, columnIndex) en una sola sincronización inicial.
+  - Procesamiento en memoria JavaScript / Motor local.
+  - Regla 1-Sync de Escritura: Asignar todas las matrices de resultados y llamar un único context.sync() final.
+
+2.3. Hilo de Ejecución No Bloqueante:
+  - Separar la manipulación del DOM de Excel del ciclo de red mediante microtareas asíncronas.
+  - Notificar estado en la UI ("Analizando rango...", "Calculando fórmulas...") usando requestAnimationFrame.
+
+2.4. Malla de Seguridad y Reversibilidad (Rollback):
+  - Capturar una instantánea en memoria (snapshot de values y formulas) del rango objetivo antes de cualquier mutación.
+  - En caso de detección de errores masivos de cálculo (#REF!, #¡VALOR!, #N/A), restaurar automáticamente el snapshot previo.
+
+--------------------------------------------------------------------------------
+[3. MATRIZ DE MODELOS Y RESOLUCIÓN DE RUTAS]
+Configuración de mapeo interno para server.js / gemini-agent.js:
+
+{
+  "models": {
+    "gemini": {
+      "default_fast": "gemini-1.5-flash",
+      "display_name_fast": "gemini-3.8-flash",
+      "display_name_ultra": "gemini-3.5-flash-lite",
+      "provider": "google_ai_studio",
+      "target_endpoint": "https://generativelanguage.googleapis.com/v1beta"
+    },
+    "reasoning": {
+      "model_id_argon": "gpt-4-argon",
+      "model_id_v3_1": "claude-3-1-sonnet",
+      "timeout_ms": 60000,
+      "streaming": true
+    }
+  }
+}
+
+--------------------------------------------------------------------------------
+[4. ESQUEMA DE HERRAMIENTAS (TOOL DEFINITION / JSON SCHEMA)]
+El agente debe estructurar sus respuestas operativas bajo la siguiente especificación:
+
+{
+  "name": "execute_excel_action",
+  "description": "Aplica transformaciones de datos o inyección de fórmulas en la hoja activa",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "targetRange": {
+        "type": "string",
+        "description": "Coordenadas del rango destino (ej: C7:D24)"
+      },
+      "operation": {
+        "type": "string",
+        "enum": ["fill_blanks_above", "set_formulas", "set_values", "classify_batch"]
+      },
+      "fillPattern": {
+        "type": "string",
+        "enum": ["relative_above", "static_repeat"],
+        "description": "Estrategia para rellenar celdas en blanco intermedias"
+      },
+      "headerRowIncluded": {
+        "type": "boolean"
+      }
+    },
+    "required": ["targetRange", "operation"]
+  }
+}
+
+--------------------------------------------------------------------------------
+[5. SYSTEM PROMPT DEL AGENTE PARA RELLENO INTELIGENTE (TURNO Y RESPONSABLE)]
+Bloque de instrucciones del sistema para `gemini-agent.js` / `server.js`:
+
+"""
+Eres el copiloto autónomo de Excel en el entorno Antigravity. Tu función principal es limpiar, normalizar, clasificar y propagar fórmulas en tablas complejas.
+
+DIRECTRICES OPERATIVAS:
+1. Análisis de Jerarquías:
+   Al recibir rangos con columnas anidadas (ej. TURNO primario, RESPONSABLE secundario):
+   - Respeta las cabeceras intactas.
+   - Identifica celdas ancla (las que tienen valores explícitos, ej: MAÑANA, Lorena, Andrés, Carlos).
+   - Identifica las celdas intermedias vacías dependientes.
+
+2. Relleno Hacia Abajo (Forward Fill / Especial Celdas en Blanco):
+   - Si se solicita propagar categorías hacia abajo sobre celdas vacías (ej: C7:D24), no devuelvas matrices gigantescas de texto.
+   - Emula la función nativa de Excel: F5 -> Especial -> Celdas en blanco con fórmula relativa ascendente (=C[fila-1]).
+   - Define el método como "fill_blanks_above" para que el cliente aplique las referencias relativas en memoria con cero overhead.
+
+3. Integridad de Datos:
+   - Jamás sobreescribas celdas que ya contengan datos válidos.
+   - No extiendas las operaciones más allá de la última fila con datos de las columnas adyacentes.
+   - Entrega siempre un informe conciso: Rango alterado, patrón aplicado y validación de muestra.
+"""
+
+--------------------------------------------------------------------------------
+[6. MOTOR DE RELLENO RÁPIDO EN TASKPANE.JS / GEMINI-AGENT.JS]
+Función JavaScript para ejecutar el forward-fill localmente en un solo ciclo de sincronización:
+
+async function runFastBlankFill(targetAddress) {
+  return await Excel.run(async (context) => {
+    const sheet = context.workbook.worksheets.getActiveWorksheet();
+    const range = sheet.getRange(targetAddress);
+    
+    // Lectura en 1 solo ciclo
+    range.load(["formulas", "values", "rowCount", "columnCount", "rowIndex", "columnIndex"]);
+    await context.sync();
+
+    const formulas = range.formulas;
+    const startRow = range.rowIndex;
+    const startCol = range.columnIndex;
+    let modified = false;
+
+    for (let r = 0; r < range.rowCount; r++) {
+      for (let c = 0; c < range.columnCount; c++) {
+        const val = formulas[r][c];
+        // Evaluar si es celda vacía y tiene celda superior en el rango o arriba de él
+        if ((val === "" || val === null) && (r > 0 || startRow > 0)) {
+          const colLetter = toExcelCol(startCol + c);
+          const aboveRow = startRow + r; // Fila superior 1-based
+          formulas[r][c] = `=${colLetter}${aboveRow}`;
+          modified = true;
+        }
+      }
+    }
+
+    if (modified) {
+      range.formulas = formulas;
+      // Escritura en 1 solo ciclo
+      await context.sync();
+    }
+    return { success: true, target: targetAddress, modified };
+  });
+}
+
+function toExcelCol(index) {
+  let col = "";
+  while (index >= 0) {
+    col = String.fromCharCode((index % 26) + 65) + col;
+    index = Math.floor(index / 26) - 1;
+  }
+  return col;
+}

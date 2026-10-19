@@ -1,0 +1,27 @@
+# Dependencias
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Variables de entorno y claves secretas (PROHIBIDO SUBIR)
+.env
+.env.local
+.env.*.local
+*apikey*
+*secret*
+keys.json
+config.secret.js
+
+# Certificados y temporales de Office Add-in Debugging
+.office-addin-dev-certs/
+dist/
+build/
+*.log
+*.tmp
+
+# Sistema Operativo y Editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

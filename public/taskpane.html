@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Multi-IA para Excel</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <link rel="stylesheet" href="taskpane.css" />
+</head>
+<body>
+  <header>
+    <div class="title">Multi-IA para Excel</div>
+    <select id="modelSelect" title="Modelo"></select>
+  </header>
+
+  <nav>
+    <button class="tab active" data-tab="agent">Agente</button>
+    <button class="tab" data-tab="fill">Rellenar columna</button>
+    <button class="tab" data-tab="settings">Ajustes</button>
+  </nav>
+
+  <!-- AGENTE -->
+  <section id="tab-agent" class="panel active">
+    <span id="agentMode" class="badge"></span>
+    <p class="hint">Selecciona celdas en la hoja y pide algo: limpiar, traducir, clasificar, escribir fórmulas, rellenar celdas en blanco, etc. La IA propone cambios y tú decides si aplicarlos. Si un cambio provoca errores masivos se revierte solo, y puedes usar «Deshacer».</p>
+    <textarea id="agentPrompt" rows="5" placeholder="Ej: Agrega en la columna D una fórmula que sume B y C..."></textarea>
+    <div class="row">
+      <label class="check"><input type="checkbox" id="agentUseSel" checked /> Usar celdas seleccionadas como contexto</label>
+    </div>
+    <div class="row">
+      <button id="agentRun" class="primary">Enviar</button>
+      <button id="agentStop" disabled>Detener</button>
+      <button id="agentApply" disabled>Aplicar a la hoja</button>
+      <button id="agentUndo" disabled title="Restaura las celdas que modificó el último cambio aplicado">Deshacer</button>
+    </div>
+    <div id="agentStatus" class="status" aria-live="polite"></div>
+    <div id="agentOut" class="out"></div>
+  </section>
+
+  <!-- RELLENAR COLUMNA -->
+  <section id="tab-fill" class="panel">
+    <p class="hint">Selecciona el rango de origen <b>incluyendo la fila de encabezados</b>. La IA llenará una columna nueva justo a la derecha, fila por fila.</p>
+    <label>Nombre de la columna nueva
+      <input id="fillHeader" type="text" placeholder="Ej: Categoría" />
+    </label>
+    <label>Instrucción
+      <textarea id="fillPrompt" rows="4" placeholder="Ej: Clasifica cada producto como Alimento, Bebida u Otro."></textarea>
+    </label>
+    <label>Filas por solicitud
+      <input id="fillBatch" type="number" min="1" max="100" value="20" />
+    </label>
+    <div class="row">
+      <button id="fillRun" class="primary">Rellenar</button>
+      <button id="fillStop" disabled>Detener</button>
+    </div>
+    <div id="fillOut" class="out"></div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section id="tab-settings" class="panel">
+    <p class="hint">Las API keys se guardan solo en este equipo (almacenamiento local del complemento) y se envían únicamente a cada proveedor.</p>
+
+    <label>OpenAI API key
+      <input id="keyOpenai" type="password" placeholder="sk-..." autocomplete="off" />
+    </label>
+    <label>Modelos de OpenAI (uno por línea)
+      <textarea id="modelsOpenai" rows="3"></textarea>
+    </label>
+
+    <label>Anthropic (Claude) API key
+      <input id="keyAnthropic" type="password" placeholder="sk-ant-..." autocomplete="off" />
+    </label>
+    <label>Modelos de Claude (uno por línea)
+      <textarea id="modelsAnthropic" rows="3"></textarea>
+    </label>
+
+    <label>Google (Gemini) API key
+      <input id="keyGemini" type="password" placeholder="Key de aistudio.google.com" autocomplete="off" />
+    </label>
+    <label>Modelos de Gemini (uno por línea)
+      <textarea id="modelsGemini" rows="3"></textarea>
+    </label>
+
+    <div class="row">
+      <button id="saveSettings" class="primary">Guardar</button>
+      <button id="clearKeys">Borrar keys</button>
+    </div>
+    <div id="settingsOut" class="out"></div>
+  </section>
+
+  <script src="taskpane.js"></script>
+  <script src="gemini-agent.js"></script>
+</body>
+</html>
